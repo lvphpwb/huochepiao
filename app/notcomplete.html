@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>HOST 管理工具</title>
+        <meta charset="UTF-8"/> 
+        <link href="css/main.css" rel="stylesheet">
+        <link href="bootstrap/css/bootstrap.min.css" rel="stylesheet">
+        <link href="lvjs/css/style.css" rel="stylesheet">
+    </head>
+    <body style="background:#eee;">
+        <div style="text-align:center;width:100%;" class="container">
+            <div class="navbar">
+              <div class="navbar-inner">
+                <ul class="nav">
+                    <li><a href="search.html">车票查询</a></li>
+                    <li class="active"><a href="notcomplete.html">未完成订单</a></li>
+                    <li><a href="system.html">预订设置</a></li>
+                </ul>
+                <ul class="nav pull-right">
+                      <li><a id="loginuser"></a></li>
+                      <li class="divider-vertical"></li>
+                      <li><a href="#" id="logoutbtn">退出登录</a></li>
+                </ul>
+              </div>
+            </div>
+            <table class="table table-hover" style="width:95%; margin:auto; margin-bottom:20px;">
+              <thead>
+                <tr>
+                    <th>车次信息</th>
+                    <th>座位信息</th>
+                    <th>旅客信息</th>
+                    <th>车票状态</th>
+                </tr>
+              </thead>
+              <tbody id="searchtbody">
+              </tbody>
+              <thead id="dealtb" style="display:none;">
+                <tr>
+                    <th colspan="4" style="text-align:right;"><a class="btn btn-danger" id="cancelorder">取消订单</a></th>
+                </tr>
+              </thead>
+            </table>
+        </div>
+        <script src="js/jquery.1.7.2.js"></script>
+        <script src="lvjs/lvjs.js"></script>
+        <script src="bootstrap/js/bootstrap.min.js"></script>
+        <script src="js/data.js"></script>
+        <script language="javascript" type="text/javascript" src="My97DatePicker/WdatePicker.js"></script>
+        <script>
+            var huochepiao = {
+                init : function(){
+                    var _self = this;
+                    $("#logoutbtn").bind('click', _self.logout);
+                    $("#loginuser").text($.lvcookie.get('loginuser'));
+                    $("#cancelorder").bind("click", _self.cancelorder);
+                    _self.loadorder();
+                },
+                logout : function(){
+                    $.ajax({
+                        url : "https://dynamic.12306.cn/otsweb/loginAction.do?method=logout",
+                        type : "GET",
+                        dataType : "text",
+                        success : function(res){
+                            if(/<title>登录<\/title>/.test(res)){
+                                $.lvalert.success({msg : "退出登录成功！", timeout : 1000, mask : 0, cb : function(){ location.href="main.html"}});
+                            }else{
+                                $.lvalert.error({msg : "退出登录失败！", timeout : 1500});
+                            }
+                        }
+                    });
+                },
+                cancelorder : function(){
+                    $.lvalert.loading({msg : "正在取消订单......！"});
+                    $.ajax({
+                        url : "https://dynamic.12306.cn/otsweb/order/orderAction.do?method=cancelMyOrderNotComplete",
+                        type : "post",
+                        dataType : "text",
+                        data : "org.apache.struts.taglib.html.TOKEN=" + $.lvcookie.get("ordertoken") + "&sequence_no=" + $.lvcookie.get("orderid") + "&orderRequest.tour_flag=",
+                        type : "post",
+                        success : function(res){
+                            var s = res.match(/var\smessage\s=\s\"([^\"]+)\";/i);
+                            if(s[1] == "取消订单成功"){
+                                $.lvalert.success({msg : "取消成功！", timeout : 1500, mask : 0, cb : function(){ location.reload();}});
+                            }else{
+                                $.lvalert.error({msg : s[1], timeout : 1500});
+                            }
+                        }
+                    });
+                },
+                loadorder : function(){
+                    $.ajax({
+                        url : "https://dynamic.12306.cn/otsweb/order/myOrderAction.do?method=queryMyOrderNotComplete&leftmenu=Y",
+                        type : "get",
+                        dataType : "text",
+                        success : function(res){
+                            var res_tmp = res.replace(/[\n]/ig, '');
+                            res_tmp = res_tmp.replace(/<td\sclass=\"blue_bold\">/i, '^');
+                            res_tmp = res_tmp.replace(/<tr\sclass=\"table_plgq\">/i, '^');
+                            var s = res_tmp.split('^');
+                            if(typeof s[1] != 'undefined'){
+                                $("#searchtbody").html("<tr><td>" + s[1]);
+                                $("#dealtb").show();
+                                var s = res_tmp.match(/name=\"checkbox_pay_([^\"]+)\"/i);
+                                $.lvcookie.set("orderid", s[1]);
+                                var s = res_tmp.match(/name=\"org\.apache\.struts\.taglib\.html\.TOKEN\"\svalue=\"([^\"]+)\"/i);
+                                $.lvcookie.set("ordertoken", s[1]);
+                            }else{
+                                $("#searchtbody").html("<tr><td colspan='4'>您没有未完成订单</td></tr>");
+                            }
+                        }
+                    });
+                }
+            };
+            huochepiao.init();
+        </script>
+    </body>
+</html>

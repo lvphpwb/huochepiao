@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>HOST 管理工具</title>
+        <meta charset="UTF-8"/> 
+        <link href="css/main.css" rel="stylesheet">
+        <link href="bootstrap/css/bootstrap.min.css" rel="stylesheet">
+        <link href="lvjs/css/style.css" rel="stylesheet">
+    </head>
+    <body style="background:#eee;">
+        <div style="text-align:center;width:100%;" class="container">
+            <div class="navbar">
+              <div class="navbar-inner">
+                <ul class="nav">
+                  <li class="active"><a href="search.html">车票查询</a></li>
+                  <li><a href="notcomplete.html">未完成订单</a></li>
+                  <li><a href="system.html">预订设置</a></li>
+                </ul>
+                <ul class="nav pull-right">
+                      <li><a id="loginuser"></a></li>
+                      <li class="divider-vertical"></li>
+                      <li><a href="#" id="logoutbtn">退出登录</a></li>
+                </ul>
+              </div>
+            </div>
+            <form class="form-inline" style="margin-left: 2.5%; text-align: left;">
+                <input type="text" class="form-control" id="begin-addr" placeholder="出发地"/>
+                <input type="text" class="form-control" id="end-addr" placeholder="目的地"/>
+                <input type="text" class="form-control" id="time" placeholder="出发时间" onClick="WdatePicker()" readonly="readonly"/>
+                <input type="button" class="btn btn-info" id="searchbtn" value="查询查票"/>
+                <input type="button" class="btn btn-success" id="startflush" value="开始刷票"/>
+                <input type="button" class="btn btn-danger" id="stopflush" value="停止刷票"/>
+                <div id="hot-list" style="display:none;">
+					<div id="hot-close">&times;</div>
+					<ul>
+						<li title="北京" code="BJP">北京</li>
+						<li title="上海" code="SHH">上海</li>
+						<li title="天津" code="TJP">天津</li>
+						<li title="重庆" code="CQW">重庆</li>
+						<li title="长沙" code="CSQ">长沙</li>
+						<li title="长春" code="CCT">长春</li>
+						<li title="成都" code="CDW">成都</li>
+						<li title="福州" code="FZS">福州</li>
+						<li title="广州" code="GZQ">广州</li>
+						<li title="贵阳" code="GIW">贵阳</li>
+						<li title="呼和浩特" code="HHC">呼和浩特</li>
+						<li title="哈尔滨" code="HBB">哈尔滨</li>
+						<li title="合肥" code="HFH">合肥</li>
+						<li title="杭州" code="HZH">杭州</li>
+						<li title="海口" code="VUQ">海口</li>
+						<li title="济南" code="JNK">济南</li>
+						<li title="昆明" code="KMM">昆明</li>
+						<li title="拉萨" code="LSO">拉萨</li>
+						<li title="兰州" code="LZJ">兰州</li>
+						<li title="南宁" code="NNZ">南宁</li>
+						<li title="南京" code="NJH">南京</li>
+						<li title="南昌" code="NCG">南昌</li>
+						<li title="沈阳" code="SYT">沈阳</li>
+						<li title="石家庄" code="SJP">石家庄</li>
+						<li title="太原" code="TYV">太原</li>
+						<li title="乌鲁木齐" code="WMR">乌鲁木齐</li>
+						<li title="武汉" code="WHN">武汉</li>
+						<li title="西宁西" code="XXO">西宁西</li>
+						<li title="西安" code="XAY">西安</li>
+						<li title="银川" code="YIJ">银川</li>
+						<li title="郑州" code="ZZF">郑州</li>
+					</ul>
+				</div>
+            </form>
+            <table class="table table-hover" style="width:95%; margin:auto; margin-bottom:20px;">
+              <thead>
+                <tr>
+                    <th style="text-align:center;">车次</th>
+                    <th style="text-align:center;">发站</th>
+                    <th style="text-align:center;">到钻</th>
+                    <th style="text-align:center;">历时</th>
+                    <th style="text-align:center;">一等座</th>
+                    <th style="text-align:center;">二等座</th>
+                    <th style="text-align:center;">软卧</th>
+                    <th style="text-align:center;">硬卧</th>
+                    <th style="text-align:center;">软座</th>
+                    <th style="text-align:center;">硬座</th>
+                    <th style="text-align:center;">无座</th>
+                    <th style="text-align:center;">购票</th>
+                </tr>
+              </thead>
+              <tbody id="searchtbody">
+              </tbody>
+            </table>
+        </div>
+        <script src="js/jquery.1.7.2.js"></script>
+        <script src="lvjs/lvjs.js"></script>
+        <script src="bootstrap/js/bootstrap.min.js"></script>
+        <script src="js/data.js"></script>
+        <script src="js/station.js"></script>
+        <script src="js/conf.js"></script>
+        <script language="javascript" type="text/javascript" src="My97DatePicker/WdatePicker.js"></script>
+        <script>
+            var huochepiao = {
+                flushstatus : null,
+                init : function(){
+                    var _self = this;
+                    $("#searchbtn").bind('click', _self.dealsearch);
+                    $("#logoutbtn").bind('click', _self.logout);
+                    $("#loginuser").text($.lvcookie.get('loginuser'));
+                    station_obj.init("begin-addr","end-addr");
+                    var train_date = $.lvcookie.get("searchdate");
+                    var today = new Date();
+                    var day = today.getDate();
+                    day = day > 10 ? day : ("0" + day);
+                    var today_date = "" + today.getFullYear() + "-" + (today.getMonth()+1) + "-" + day;
+                    if(train_date == null || train_date.length == 0 || train_date < today_date){
+                        $("#time").val(today_date);
+                    }else{
+                        $("#time").val(train_date);
+                    }
+                    $("#begin-addr").val($.lvcookie.get("searchstart"));
+                    $("#begin-addr").attr("code", $.lvcookie.get("searchstart_code"));
+                    $("#end-addr").val($.lvcookie.get("searchend"));
+                    $("#end-addr").attr("code", $.lvcookie.get("searchend_code"));
+                    $("#startflush").bind("click", _self.startflush);
+                    $("#stopflush").bind("click", _self.endflush);
+                    if($("#begin-addr").val().length>0 && $("#end-addr").val().length>0 && $("#time").val().length>0){
+                        _self.dealsearch();
+                    }
+                },
+                startflush : function(){
+                    $("#startflush").attr('disabled', "true");
+                    clearInterval(huochepiao.flushstatus);
+                    $("#searchbtn").click();
+                    huochepiao.flushstatus = setInterval(function(){
+                        $("#searchbtn").click();
+                    }, 3000);
+                },
+                endflush : function(){
+                    $("#startflush").removeAttr('disabled');
+                    clearInterval(huochepiao.flushstatus);
+                },
+                logout : function(){
+                    $.ajax({
+                        url : "https://dynamic.12306.cn/otsweb/loginAction.do?method=logout",
+                        type : "GET",
+                        dataType : "text",
+                        success : function(res){
+                            if(/<title>登录<\/title>/.test(res)){
+                                $.lvalert.success({msg : "退出登录成功！", timeout : 1000, mask : 0, cb : function(){ location.href="main.html"}});
+                            }else{
+                                $.lvalert.error({msg : "退出登录失败！", timeout : 1500});
+                            }
+                        }
+                    });
+                },
+                dealsearchdata : function(restext){
+                    var tmp = restext.replace(/\\n/g, "@");
+                    var data = tmp.split('@');
+                    var searchresult = "";
+                    $.each(data, function(i, val){
+                        var info = val.split(",");
+                        var from = info[2].replace("/otsweb/images/tips", "images");
+                        from = from.replace("<br>&nbsp;&nbsp;&nbsp;&nbsp;", "");
+                        from = from.replace(/\&nbsp;/g, "");
+                        var to = info[3].replace("/otsweb/images/tips", "images");
+                        to = to.replace("<br>&nbsp;&nbsp;&nbsp;&nbsp;", "");
+                        to = to.replace(/\&nbsp;/g, "");
+                        var book = info[16].replace("javascript:getSelected", "huochepiao.dealbook");
+                        searchresult += "<tr><td style='text-align: center;'>" + $(info[1]).text() + "</td><td style='text-align: center;'>" + from + "</td><td style='text-align: center;'>" + to + "</td><td style='text-align: center;'>" + info[4] + "</td><td style='text-align: center;'>" + info[7] + "</td><td style='text-align: center;'>" + info[8] + "</td><td style='text-align: center;'>" + info[10] + "</td><td style='text-align: center;'>" + info[11] + "</td><td style='text-align: center;'>" + info[12] + "</td><td style='text-align: center;'>" + info[13] + "</td><td style='text-align: center;'>" + info[14] + "</td><td style='text-align: center;'>" + book + "</td></tr>";
+                    });
+                    $("#searchtbody").html(searchresult);
+                    $("#searchtbody").find('a').addClass("btn btn-info");
+                },
+                dealsearch : function(){
+                    var beginaddr = $.trim($("#begin-addr").val());
+                    if(beginaddr.length == 0){
+                        $.lvalert.error({msg : "请选择出发地！", timeout : 1500});
+                        return false;
+                    }
+                    var endaddr = $.trim($("#end-addr").val());
+                    if(endaddr.length == 0){
+                        $.lvalert.error({msg : "请选择目的地！", timeout : 1500});
+                        return false;
+                    }
+                    var time = $.trim($("#time").val());
+                    if(time.length == 0){
+                        $.lvalert.error({msg : "请选择出发时间！", timeout : 1500});
+                        return false;
+                    }
+                    $.lvalert.loading({msg : "正在查询中......！"});
+                    $.lvcookie.set("searchdate", time);
+                    $.lvcookie.set("searchstart", beginaddr);
+                    $.lvcookie.set("searchend", endaddr);
+                    $.lvcookie.set("searchstart_code", $("#begin-addr").attr('code'));
+                    $.lvcookie.set("searchend_code", $("#end-addr").attr('code'));
+                    $.ajax({
+                        url : "https://dynamic.12306.cn/otsweb/order/querySingleAction.do?method=qt&orderRequest.train_date=" + time + "&orderRequest.from_station_telecode=" + $("#begin-addr").attr('code') + "&orderRequest.to_station_telecode=" + $("#end-addr").attr('code') + "&orderRequest.train_no=&trainPassType=QB&trainClass=QB%23D%23Z%23T%23K%23QT%23&includeStudent=00&seatTypeAndNum=&orderRequest.start_time_str=00%3A00--24%3A00",
+                        type : "GET",
+                        dataType : "text",
+                        success : function(res){
+                            $.ajax({
+                                url : "https://dynamic.12306.cn/otsweb/order/querySingleAction.do?method=queryLeftTicket&orderRequest.train_date=" + time + "&orderRequest.from_station_telecode=" + $("#begin-addr").attr('code') + "&orderRequest.to_station_telecode=" + $("#end-addr").attr('code') + "&orderRequest.train_no=&trainPassType=QB&trainClass=QB%23D%23Z%23T%23K%23QT%23&includeStudent=00&seatTypeAndNum=&orderRequest.start_time_str=00%3A00--24%3A00",
+                                type : "GET",
+                                dataType : "text",
+                                success : function(res){
+                                    if(res.length == 0){
+                                        $("#searchtbody").html("");
+                                        $.lvalert.error({msg : "没有查询到相关车次！", timeout : 1500});
+                                    }else if(res == '-10'){
+                                        $.lvalert.error({msg : "登录超时，请重新登录！", timeout : 1500, cb : function(){ location.href = "main.html";}});
+                                    }else if(res.substr(0, 1) == 0){
+                                        $.lvalert.success({msg : "查询成功！", timeout : 500, mask : 0});
+                                        huochepiao.dealsearchdata(res);
+                                    }else{
+                                        $("#searchtbody").html("");
+                                        $.lvalert.error({msg : "查询出错，请重试！", timeout : 1500});
+                                    }
+                                }
+                            });
+                        }
+                    });
+                },
+                dealbook : function(args){
+                    var bookinfo = args.split('#');
+                    $.lvalert.loading({msg : "正在处理中......！"});
+                    $.ajax({
+                        url : "https://dynamic.12306.cn/otsweb/loginAction.do?method=el",
+                        type : "post",
+                        dataType : "text",
+                        success : function(res){
+                            $.ajax({
+                                url : "https://dynamic.12306.cn/otsweb/order/querySingleAction.do?method=submutOrderRequest",
+                                type : "post",
+                                dataType : "text",
+                                data : "station_train_code=" + bookinfo[0] + "&train_date=" + $("#time").val() + "&seattype_num=&from_station_telecode=" + bookinfo[4] + "&to_station_telecode=" + bookinfo[5] + "&include_student=00&from_station_telecode_name=" + encodeURIComponent($("#begin-addr").val()) + "&to_station_telecode_name=" + encodeURIComponent($("#end-addr").val()) + "&round_train_date=" + $("#time").val() + "&round_start_time_str=00%3A00--24%3A00&single_round_type=1&train_pass_type=QB&train_class_arr=QB%23D%23Z%23T%23K%23QT%23&start_time_str=00%3A00--24%3A00&lishi=" + encodeURIComponent(bookinfo[1]) + "&train_start_time=" + encodeURIComponent(bookinfo[2]) + "&trainno4=" + bookinfo[3] + "&arrive_time=" + encodeURIComponent(bookinfo[6]) + "&from_station_name=" + encodeURIComponent(bookinfo[7]) + "&to_station_name=" + encodeURIComponent(bookinfo[8]) + "&from_station_no=" + bookinfo[9] + "&to_station_no=" + bookinfo[10] + "&ypInfoDetail=" + bookinfo[11] + "&mmStr=" + encodeURIComponent(bookinfo[12]) + "&locationCode=" + bookinfo[13] + "&NzA4MTI0=NWJiNGZkODE4NDNhNTI4Yg%3D%3D&myversion=undefined",
+                                statusCode : {
+                                    200 : function(status){
+                                        //console.log(status);
+                                    },
+                                    302 : function(status){
+                                        location.href = "main.html";
+                                    }
+                                },
+                                success : function(res){
+                                    if(/<h1>选择支付方式。<\/h1>/.test(res)){
+                                        //note 存储信息
+                                        var res_tmp = res.replace(/[\n]/ig, '');
+                                        res_tmp = res_tmp.replace("以上余票信息随时发生变化，仅作参考", '^');
+                                        res_tmp = res_tmp.replace(/<table\s+width=\"100%\"\s+border=\"0\"\s+cellspacing=\"1\"\s+cellpadding=\"0\"\s+class=\"qr_box\">/i, '^');
+                                        var s = res_tmp.split('^');
+                                        $.lvcookie.set('traininfo', s[1]);
+                                        var res_tmp = res.replace(/[\n]/ig, '');
+                                        var res_tmp = res_tmp.replace(/<select\s+name=\"passenger_1_seat\"\s+id=\"passenger_1_seat\">/i, '^');
+                                        res_tmp = res_tmp.replace(/<\/select>/ig, '^');
+                                        var s = res_tmp.split('^');
+                                        $.lvcookie.set('bookseat', s[1]);
+                                        var s = res.match(/name=\"org\.apache\.struts\.taglib\.html\.TOKEN\"\svalue=\"([^\"]+)\"/);
+                                        var token = s[1];
+                                        $.lvcookie.set('booktoken', s[1]);
+                                        //console.log(res);
+                                        var s = res.match(/<input\s+type=\"hidden\"\s+name=\"leftTicketStr\"\s+id=\"left_ticket\"\s+value=\"([^\"]+)\"/i);
+                                        $.lvcookie.set('bookleft_ticket', s[1]);
+                                        var s = res.match(/value=\"([^\"]+)\"\s+id=\"start_date\"/i);
+                                        $.lvcookie.set('booktrain_date', s[1]);
+                                        $.lvcookie.set('booktraininfo', args);
+                                        location.href = "book.html";
+                                    }else{
+                                        var s = res.match(/var\smessage\s=\s\"([^\"]+)\"/);
+                                        if(s == null){
+                                            $.lvalert.error({msg : "预订出错，请重试！", timeout : 1500});
+                                        }else{
+                                            $.lvalert.error({msg : s[1], timeout : 2000});
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                    });
+                }
+            };
+            huochepiao.init();
+        </script>
+    </body>
+</html>

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>火车票预订工具</title>
+        <meta charset="UTF-8"/> 
+        <link href="css/main.css" rel="stylesheet">
+        <link href="bootstrap/css/bootstrap.min.css" rel="stylesheet">
+        <link href="lvjs/css/style.css" rel="stylesheet">
+    </head>
+    <body style="background:#eee;">
+        <div style="text-align:center; margin-top:50px; width：100%" class="container">
+            <form class="form-inline">
+                <input type="text" class="form-control" id="UserName" placeholder="账号" value="">
+                <input type="password" class="form-control" id="password" placeholder="密码" value="">
+                <img id="codeimg" src="" style="cursor:pointer;" title="点击更换"/>
+                <input type="text" class="form-control" id="randCode" placeholder="验证码" maxlength=4 />
+            </form>
+        </div>
+        <script src="js/jquery.1.7.2.js"></script>
+        <script src="js/conf.js"></script>
+        <script src="lvjs/lvjs.js"></script>
+        <script src="bootstrap/js/bootstrap.min.js"></script>
+        <script>
+            var huochepiao = {
+                loginstatus : false,
+                init : function(){
+                    var _self = this;
+                    $("#codeimg").bind('click', _self.changeimg);
+                    $("#randCode").bind('keyup',  _self.deallogin);
+                    $("#UserName").val(trainsysconf.loginusername);
+                    $("#password").val(trainsysconf.loginpassword);
+                    _self.logout();
+                },
+                logout : function(){
+                    $.ajax({
+                        url : "https://dynamic.12306.cn/otsweb/loginAction.do?method=logout",
+                        type : "GET",
+                        dataType : "text",
+                        success : function(res){
+                            $.lvcookie.empty('loginuser');
+                            huochepiao.changeimg();
+                        }
+                    });
+                },
+                changeimg : function(){
+                    $("#codeimg").attr('src', "https://dynamic.12306.cn/otsweb/passCodeNewAction.do?module=login&rand=sjrand");
+                },
+                deallogin : function(){
+                    var randCode = $.trim($("#randCode").val());
+                    if(randCode.length == 4){
+                        console.log(huochepiao.loginstatus);
+                        if(huochepiao.loginstatus == true){
+                            return false;
+                        }
+                        huochepiao.loginstatus = true;
+                        console.log('sssssssss');
+                        var username = $.trim($("#UserName").val());
+                        if(username.length == 0){
+                            $.lvalert.error({msg : "账号不能为空！"});
+                            return false;
+                        }
+                        var password = $.trim($("#password").val());
+                        if(password.length == 0){
+                            $.lvalert.error({msg : "密码不能为空！"});
+                            return false;
+                        }
+                        if(randCode.length == 0){
+                            $.lvalert.error({msg : "验证码不能为空！"});
+                            return false;
+                        }
+                        $.lvalert.loading({msg : "正在登录中......"});
+                        $.ajax({
+                            url : "https://dynamic.12306.cn/otsweb/loginAction.do?method=loginAysnSuggest",
+                            type : "POST",
+                            dataType : "json",
+                            data : {},
+                            success : function(res){
+                                $.ajax({
+                                    url : "https://dynamic.12306.cn/otsweb/loginAction.do?method=login",
+                                    type : "POST",
+                                    dataType : "text",
+                                    data : "loginRand=" + res.loginRand + "&refundLogin=N&refundFlag=Y&isClick=&form_tk=null&loginUser.user_name=" + $("#UserName").val() + "&nameErrorFocus=&user.password=" + $("#password").val() + "&passwordErrorFocus=&randCode=" + $("#randCode").val() + "&randErrorFocus=&NjI5ODA1NA%3D%3D=YWUyZGRlOTVkNjgxZWJjNQ%3D%3D&myversion=undefined",
+                                    success : function(data){
+                                        huochepiao.loginstatus = false;
+                                        if(/var\shello\s=/.test(data)){
+                                            var s = data.match(/var\shello\s=\s'([^\']+)'/i);
+                                            $.lvcookie.set('loginuser', s[1]);
+                                            $.lvalert.success({msg : "登录成功！", timeout : 1500, cb : function(){ location.href="search.html"}});
+                                        }else{
+                                            $("#codeimg").click();
+                                            var s = data.match(/style=\"color:\sred;\">([^<>]+)<\/span>/i);
+                                            $("#randCode").val("");
+                                            if(s !== null){
+                                                $.lvalert.error({msg : s[1]});
+                                            }else{
+                                                var s = data.match(/var\smessage\s=\s\"([^\"]+)\"/i);
+                                                if(s !== null){
+                                                    $.lvalert.error({msg : s[1]});
+                                                    $("#UserName").val("");
+                                                    $("#password").val("");
+                                                }else{
+                                                    $.lvalert.error({msg : "登录失败：未知错误,请重试！"});
+                                                }
+                                            }
+                                        }
+                                    }
+                                });
+                            }
+                        });
+                    }
+                }
+            };
+            huochepiao.init();
+        </script>
+    </body>
+</html>

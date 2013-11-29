@@ -1,0 +1,18 @@
+body{ background: #eeeeee;}
+.textcenter{ text-align: center;}
+.allwarp{ padding: 10px; background: #efefef;}
+#addform{ position: fixed; width: 1028px;}
+.allwarp form{ margin-bottom: 0px;}
+#scrollparent{ height: 585px;margin-top: 60px;overflow: hidden;}
+#domainlistdiv{ height: 100%;}
+.table{ background: #ffffff; color: #555555;}
+#domainlistdiv td img{ float: left; vertical-align: middle;}
+#domainlistdiv td select{ float: left; margin-left: 5px; vertical-align: middle; height: 28px;}
+
+img{ vertical-align:middle;}
+#hot-list,.addr-list{width:400px;border: solid 1px #D1B88F;position:absolute;background-color:white;display:none;padding: 20px;height: 225px;color: #844310;z-index: 9999}
+#hot-list ul{margin:0px; padding:0px;}
+#hot-list li,.addr-list li{float:left;list-style-type: none;width:80px;cursor:pointer;height: 29px;line-height: 29px;text-align: center;}
+#hot-list li.li-hover,.addr-list li.li-hover{text-decoration: underline;}
+#hot-close{position:absolute;right:2px;top:-1px;*top:2px;cursor: pointer;font-size: 24px;line-height: 24px;opacity:0.8;color:gray;filter:alpha(opacity=80);}
+#hot-close:hover{opacity:1;filter:alpha(opacity=100);}.addr-list div.tip{position: absolute;top:50px;width:200px;left:50%;margin-left:-100px;text-align: center;display: none;}

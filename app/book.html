@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>HOST 管理工具</title>
+        <meta charset="UTF-8"/> 
+        <link href="css/main.css" rel="stylesheet">
+        <link href="bootstrap/css/bootstrap.min.css" rel="stylesheet">
+        <link href="lvjs/css/style.css" rel="stylesheet">
+    </head>
+    <body style="background:#eee;">
+        <div style="text-align:center;width:100%;" class="container">
+            <div class="navbar">
+              <div class="navbar-inner">
+                <ul class="nav">
+                    <li class="active"><a href="search.html">车票查询</a></li>
+                    <li><a href="notcomplete.html">未完成订单</a></li>
+                    <li><a href="system.html">预订设置</a></li>
+                </ul>
+                <ul class="nav pull-right">
+                      <li><a id="loginuser"></a></li>
+                      <li class="divider-vertical"></li>
+                      <li><a href="#" id="logoutbtn">退出登录</a></li>
+                </ul>
+              </div>
+            </div>
+            <div style="width:95%; background:#fff; margin:auto; margin-bottom:20px; padding-bottom:0px;">
+                <div class="navbar" style="margin-bottom:0px;">
+                  <div class="navbar-inner">
+                    <a class="brand" href="#">列车信息</a>
+                  </div>
+                </div>
+                <div id="traininfo">
+                </div>
+            </div>
+            <div style="width:95%; background:#fff; margin:auto; margin-bottom:20px; padding-bottom:5px;">
+                <div class="navbar" style="margin-bottom:10px;">
+                  <div class="navbar-inner">
+                      <a class="brand" href="#">常联系人</a>
+                      <ul class="nav pull-right">
+                          <li><a href="#" id="reloadpass"><span class="label label-info">重新加载</span></a></li>
+                      </ul>
+                  </div>
+                </div>
+                <form id="passengerlist" class="form-inline" style="text-align:left; margin-bottom:10px; padding-left:10px;">
+                </form>
+            </div>
+            <form>
+            <table class="table table-hover" style="width:95%; margin:auto; margin-bottom:20px;">
+              <thead>
+                <tr>
+                    <th>席别</th>
+                    <th>票种</th>
+                    <th>姓名</th>
+                    <th>身份证号</th>
+                    <th>手机号</th>
+                    <th style="text-align:center;">删除</th>
+                </tr>
+              </thead>
+              <tbody id="passtbody">
+                  <tr id="example">
+                      <td>
+                          <select class="input-small seat" style="margin-bottom:0px;" name="passenger_seat">
+                          </select>
+                      </td>
+                      <td>
+                          <select class="input-small" style="margin-bottom:0px;" name="passenger_ticket">
+                              <option value="1">成人票</option>
+                              <option value="2">儿童票</option>
+                              <option value="3">学生票</option>
+                          </select>
+                      </td>
+                      <td>
+                          <input class="input-small name" style="margin-bottom:0px;" type="text" name="passenger_name" placeholder="请输入姓名"/>
+                      </td>
+                      <td>
+                          <input class="input-medium idno" style="margin-bottom:0px;" type="text" name="passenger_cardno" placeholder="请输入身份证号"/>
+                      </td>
+                      <td>
+                          <input class="input-small phone" style="margin-bottom:0px;" type="text" name="passenger_mobileno" placeholder="请输入手机号"/>
+                      </td>
+                      <td style="text-align:center;">
+                          <a class="btn btn-danger">删除</a>
+                      </td>
+                  </tr>
+              </tbody>
+            </table>
+            </form>
+            <form class="form-inline">
+              <img id="codeimg" src="https://dynamic.12306.cn/otsweb/passCodeNewAction.do?module=passenger&rand=randp&0.38538710633292794" style="cursor:pointer;"/>
+              <input type="text" class="input-small" id="randCode" name="randCode" placeholder="验证码" maxlength="4">
+            </form>
+        </div>
+        <script src="js/jquery.1.7.2.js"></script>
+        <script src="lvjs/lvjs.js"></script>
+        <script src="bootstrap/js/bootstrap.min.js"></script>
+        <script>
+            var huochepiao = {
+                submitstatus : false,
+                passenger : null,
+                queuetimer : null,
+                orderok : false,
+                init : function(){
+                    var _self = this;
+                    $("#logoutbtn").bind('click', _self.logout);
+                    $("#loginuser").text($.lvcookie.get('loginuser'));
+                    _self.loadpassenger();
+                    $("#reloadpass").bind("click", _self.loadpassenger);
+                    $("#codeimg").bind('click', _self.changeimg);
+                    $("#randCode").bind('keyup',  _self.dealconfirm);
+                    $("#traininfo").html("<table class='table table-hover' style='margin-bottom:0px;'>" + $.lvcookie.get("traininfo") + "</td></tr></table>");
+                    $("#traininfo").find('table').find('tr')[2].remove();
+                    $(".seat").html($.lvcookie.get('bookseat'));
+                },
+                changeimg : function(){
+                    $("#codeimg").attr('src', "https://dynamic.12306.cn/otsweb/passCodeNewAction.do?module=passenger&rand=randp&" + Math.random());
+                },
+                dealconfirm : function(){
+                    var randCode = $.trim($("#randCode").val());
+                    if(randCode.length == 4){
+                        if(huochepiao.submitstatus == true){
+                            return false;
+                        }
+                        huochepiao.submitstatus = true;
+                        //note 判断乘车人信息完整
+                        var num = $("#passtbody").find(".add").length;
+                        var seat = 0;
+                        var passdata = "";
+                        for(var i=0; i<num; i++){
+                            var tmpobj = $($("#passtbody").find(".add")[i]);
+                            console.log(tmpobj);
+                            if(tmpobj.find("input[name='passenger_name']").val().length == 0){
+                                $.lvalert.error({msg : "请填写第" + (i+1) + "位乘客的姓名！", timeout : 1500});
+                                return false;
+                            }
+                            if(tmpobj.find("input[name='passenger_cardno']").val().length == 0){
+                                $.lvalert.error({msg : "请填写第" + (i+1) + "位乘客的省份证号！", timeout : 1500});
+                                return false;
+                            }
+                            seat = tmpobj.find("select[name='passenger_seat']").val();
+                            passdata += "&passengerTickets=" + tmpobj.find("select[name='passenger_seat']").val() + ",0," + tmpobj.find("select[name='passenger_ticket']").val() + "," + tmpobj.find("input[name='passenger_name']").val() + ",1," + tmpobj.find("input[name='passenger_cardno']").val() + "," + tmpobj.find("input[name='passenger_mobileno']").val() + ",Y";
+                            passdata += "&oldPassengers=" + tmpobj.find("input[name='passenger_name']").val() + ",1," + tmpobj.find("input[name='passenger_cardno']").val();
+                            passdata += "&passenger_" + (i+1) + "_cardno=" + tmpobj.find("input[name='passenger_cardno']").val();
+                            passdata += "&passenger_" + (i+1) + "_cardtype=1";
+                            passdata += "&passenger_" + (i+1) + "_mobileno=" + tmpobj.find("input[name='passenger_mobileno']").val();
+                            passdata += "&passenger_" + (i+1) + "_seat=" + tmpobj.find("select[name='passenger_seat']").val();
+                            passdata += "&passenger_" + (i+1) + "_ticket=" + tmpobj.find("select[name='passenger_ticket']").val();
+                        }
+                        var tmpnum = 5-num;
+                        if(tmpnum>0){
+                            for(var i=0; i<tmpnum; i++){
+                                passdata += "&oldPassengers=";
+                            }
+                        }
+                        console.log(passdata);
+                        var train_args = $.lvcookie.get('booktraininfo');
+                        train_args = train_args.split('#');
+                        console.log(train_args);
+                                $.ajax({
+                                    url : "https://dynamic.12306.cn/otsweb/order/confirmPassengerAction.do?method=checkOrderInfo&rand=" + randCode,
+                                    type : "POST",
+                                    dataType : "json",
+                                    data : "org.apache.struts.taglib.html.TOKEN=" + $.lvcookie.get('booktoken') + "&leftTicketStr=" + $.lvcookie.get('bookleft_ticket') + "&textfield=%E4%B8%AD%E6%96%87%E6%88%96%E6%8B%BC%E9%9F%B3%E9%A6%96%E5%AD%97%E6%AF%8D&checkbox0=0&checkbox1=1&orderRequest.train_date=" + $.lvcookie.get('booktrain_date') + "&orderRequest.train_no=" + train_args[3] + "&orderRequest.station_train_code=" + train_args[0] + "&orderRequest.from_station_telecode=" + train_args[4] + "&orderRequest.to_station_telecode=" + train_args[5] + "&orderRequest.seat_type_code=&orderRequest.ticket_type_order_num=&orderRequest.bed_level_order_num=000000000000000000000000000000&orderRequest.start_time=" + train_args[2] + "&orderRequest.end_time=" + train_args[6] + "&orderRequest.from_station_name=" + train_args[7] + "&orderRequest.to_station_name=" + train_args[8] + "&orderRequest.cancel_flag=1&orderRequest.id_mode=Y&checkbox9=Y&checkbox9=Y&checkbox9=Y&checkbox9=Y&checkbox9=Y&randCode=" + randCode + "&orderRequest.reserve_flag=A&tFlag=dc" + passdata,
+                                    statusCode : {
+                                        200 : function(status){
+                                            console.log(status);
+                                        },
+                                        302 : function(status){
+                                            console.log(status);
+                                        }
+                                    },
+                                    success : function(res){
+                                        huochepiao.submitstatus = false;
+                                        //{"checkHuimd":"Y","check608":"Y","msg":"","errMsg":"Y"}
+                                        $.lvalert.loading({msg : "正在排队处理中......"});
+                                        if(res.errMsg == 'Y' && res.msg.length == 0){
+                                            $.ajax({
+                                                url : "https://dynamic.12306.cn/otsweb/order/confirmPassengerAction.do?method=getQueueCount&train_date=" + $.lvcookie.get('booktrain_date') + "&train_no=" + train_args[3] + "&station=" + train_args[0] + "&seat=" + seat + "&from=" + train_args[4] + "&to=" + train_args[5] + "&ticket=" + $.lvcookie.get('bookleft_ticket') + "",
+                                                type : "get",
+                                                dataType : "json",
+                                                success : function(res){
+                                                    //{"countT":0,"count":6,"ticket":"1*****30024*****00201*****01793*****0071","op_1":true,"op_2":false}
+                                                    console.log(res);
+                                                    if(res.ticket.length>0){
+                                                        setTimeout(function(){
+                                                            $.ajax({
+                                                                url : "https://dynamic.12306.cn/otsweb/order/confirmPassengerAction.do?method=confirmSingleForQueue",
+                                                                type : "post",
+                                                                data : "org.apache.struts.taglib.html.TOKEN=" + $.lvcookie.get('booktoken') + "&leftTicketStr=" + $.lvcookie.get('bookleft_ticket') + "&textfield=%E4%B8%AD%E6%96%87%E6%88%96%E6%8B%BC%E9%9F%B3%E9%A6%96%E5%AD%97%E6%AF%8D&checkbox0=0&checkbox1=1&orderRequest.train_date=" + $.lvcookie.get('booktrain_date') + "&orderRequest.train_no=" + train_args[3] + "&orderRequest.station_train_code=" + train_args[0] + "&orderRequest.from_station_telecode=" + train_args[4] + "&orderRequest.to_station_telecode=" + train_args[5] + "&orderRequest.seat_type_code=&orderRequest.ticket_type_order_num=&orderRequest.bed_level_order_num=000000000000000000000000000000&orderRequest.start_time=" + train_args[2] + "&orderRequest.end_time=" + train_args[6] + "&orderRequest.from_station_name=" + train_args[7] + "&orderRequest.to_station_name=" + train_args[8] + "&orderRequest.cancel_flag=1&orderRequest.id_mode=Y&checkbox9=Y&checkbox9=Y&checkbox9=Y&checkbox9=Y&checkbox9=Y&randCode=" + randCode + "&orderRequest.reserve_flag=A" + passdata,
+                                                                dataType : "json",
+                                                                success : function(res){
+                                                                    //{errMsg: "Y"} 
+                                                                    console.log(res);
+                                                                    if(res.errMsg == 'Y'){
+                                                                        huochepiao.queuetrain();
+                                                                    }else{
+                                                                        $.lvalert.error({msg : res.errMsg, timeout : 1500});
+                                                                        $("#codeimg").click();
+                                                                        $("#randCode").val("");
+                                                                    }
+                                                                }
+                                                            });
+                                                        }, 5000);
+                                                    }else{
+                                                        $.lvalert.error({msg : "排队出错！", timeout : 2000});
+                                                        $("#codeimg").click();
+                                                        $("#randCode").val("");
+                                                    }
+                                                }
+                                            });
+                                        }else{
+                                            $.lvalert.error({msg : res.errMsg == "Y" ? res.msg : res.errMsg, timeout : 1500});
+                                            $("#codeimg").click();
+                                            $("#randCode").val("");
+                                        }
+                                    }
+                                });
+                    }
+                },
+                queuetrain : function(){
+                    clearInterval(huochepiao.queuetimer);
+                    huochepiao.queuetimer = setInterval(function(){
+                        $.ajax({
+                            url : "https://dynamic.12306.cn/otsweb/order/myOrderAction.do?method=queryOrderWaitTime&tourFlag=dc",
+                            type : "get",
+                            dataType : "json",
+                            success : function(res){
+                                console.log(res);
+                                //{tourFlag: "dc", waitTime: 4, waitCount: 1, requestId: 5811425770917264000, count: 0}
+                                if(res.waitTime<=0){
+                                    clearInterval(huochepiao.queuetimer);
+                                    $.lvalert.success({msg : "订票成功！", timeout : 2000, mask : 0, cb : function(){ location.href="notcomplete.html"}});
+                                }
+                            }
+                        });
+                    }, 5000);
+                },
+                logout : function(){
+                    $.ajax({
+                        url : "https://dynamic.12306.cn/otsweb/loginAction.do?method=logout",
+                        type : "GET",
+                        dataType : "text",
+                        success : function(res){
+                            if(/<title>登录<\/title>/.test(res)){
+                                $.lvalert.success({msg : "退出登录成功！", timeout : 1000, mask : 0, cb : function(){ location.href="main.html"}});
+                            }else{
+                                $.lvalert.error({msg : "退出登录失败！", timeout : 1500});
+                            }
+                        }
+                    });
+                },
+                loadpassenger : function(){
+                    $.ajax({
+                        url : "https://dynamic.12306.cn/otsweb/order/confirmPassengerAction.do?method=getpassengerJson",
+                        type : "POST",
+                        dataType : "json",
+                        data : {},
+                        success : function(res){
+                            if(typeof res.passengerJson == "undefined"){
+                                $.lvalert.error({msg : "加载常联系人失败！", timeout : 1500});
+                            }else{
+                                huochepiao.passenger = res.passengerJson;
+                                var html_str = ""
+                                $.each(res.passengerJson, function(i, val){
+                                    html_str += '<label class="checkbox"><input type="checkbox" value="' + i + '">&nbsp;' + val.passenger_name + '</label>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;';
+                                });
+                                $("#passengerlist").html(html_str);
+                                $("#passengerlist").find('input').bind('change', huochepiao.dealpass);
+                                $("#passtbody").find(".add").remove();
+                                $("#example").show();
+                            }
+                        }
+                    });
+                },
+                dealpass : function(){
+                    var obj = $(this);
+                    var index = obj.val();
+                    if(obj.attr("checked")){
+                        if($("#passtbody").find(".add").length >= 5){
+                            $.lvalert.error({msg : "已达到最多订票人数！", timeout : 1500});
+                            obj.removeAttr('checked');
+                            return false;
+                        }
+                        $("#example").hide();
+                        var html_str = "<tr class='add' id='pass_" + index + "'>" + $("#example").html() + "</tr>";
+                        var html_obj = $(html_str);
+                        html_obj.find('.name').val(huochepiao.passenger[index]['passenger_name']);
+                        html_obj.find('.idno').val(huochepiao.passenger[index]['passenger_id_no']);
+                        html_obj.find('.phone').val(huochepiao.passenger[index]['mobile_no']);
+                        $("#passtbody").append(html_obj);
+                        $("#passtbody").find('a').bind('click', huochepiao.delpass);
+                    }else{
+                        $("#passtbody").find("#pass_"+index).remove();
+                        if($("#passtbody").find(".add").length == 0){
+                            $("#example").show();
+                        }
+                    }
+                },
+                delpass : function(){
+                    var obj = $(this);
+                    var id = obj.parent().parent().attr('id');
+                    if(id != "example"){
+                        $("#"+id).remove();
+                        var tmp = id.split('_');
+                        $("#passengerlist").find("input[value='" + tmp[1] + "']").removeAttr('checked');
+                    }
+                    if($("#passtbody").find(".add").length == 0){
+                        $("#example").show();
+                    }
+                }
+            };
+            huochepiao.init();
+        </script>
+    </body>
+</html>

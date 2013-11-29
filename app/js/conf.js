@@ -1,0 +1,1 @@
+var trainsysconf={"loginusername":"","loginpassword":""}
