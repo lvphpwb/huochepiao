@@ -13,5 +13,6 @@
     },
     "dependencies": {
         "node-webkit": ">=0.5.1"
-    }
+    },
+    "chromium-args": "--ignore-certificate-errors"
 }
